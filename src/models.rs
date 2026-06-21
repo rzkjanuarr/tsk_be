@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use sqlx::FromRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -35,9 +35,9 @@ pub struct Task {
     pub description: String,
     pub status: String,
     #[sqlx(rename = "created_at")]
-    pub created_at: DateTime<Utc>,
+    pub created_at: String,
     #[sqlx(rename = "updated_at")]
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,8 +58,8 @@ pub struct TaskResponse {
     pub title: String,
     pub description: String,
     pub status: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 impl From<Task> for TaskResponse {

@@ -6,6 +6,7 @@ use crate::models::{Task, CreateTaskRequest, TaskStatus};
 use crate::utils::generate_slug;
 use crate::error::AppError;
 
+/// Create a new task
 pub async fn create_task(
     pool: &PgPool,
     req: &CreateTaskRequest,
@@ -13,7 +14,7 @@ pub async fn create_task(
     let id = Uuid::new_v4().to_string();
     let slug = generate_slug();
     let status = TaskStatus::Pending.as_str();
-    let now = Utc::now();
+    let now = Utc::now().to_rfc3339();
 
     let task = sqlx::query_as::<_, Task>(
         r#"
@@ -27,8 +28,8 @@ pub async fn create_task(
     .bind(&req.title)
     .bind(&req.description)
     .bind(status)
-    .bind(now)
-    .bind(now)
+    .bind(&now)
+    .bind(&now)
     .fetch_one(pool)
     .await?;
 
@@ -36,6 +37,7 @@ pub async fn create_task(
     Ok(task)
 }
 
+/// Get all tasks with pagination
 pub async fn get_tasks_paginated(
     pool: &PgPool,
     page: i64,
@@ -59,6 +61,7 @@ pub async fn get_tasks_paginated(
     Ok(tasks)
 }
 
+/// Get a single task by ID
 pub async fn get_task_by_id(pool: &PgPool, id: &str) -> Result<Task, AppError> {
     let task = sqlx::query_as::<_, Task>(
         r#"
@@ -74,17 +77,18 @@ pub async fn get_task_by_id(pool: &PgPool, id: &str) -> Result<Task, AppError> {
     Ok(task)
 }
 
+/// Update task status
 pub async fn update_task_status(
     pool: &PgPool,
     id: &str,
     status: &str,
 ) -> Result<Task, AppError> {
-
+    // Validate status
     if TaskStatus::from_str(status).is_none() {
         return Err(AppError::BadRequest("Invalid status value".to_string()));
     }
 
-    let now = Utc::now();
+    let now = Utc::now().to_rfc3339();
     let task = sqlx::query_as::<_, Task>(
         r#"
         UPDATE tasks
@@ -94,11 +98,21 @@ pub async fn update_task_status(
         "#,
     )
     .bind(status)
-    .bind(now)
+    .bind(&now)
     .bind(id)
     .fetch_one(pool)
     .await?;
 
     log::info!("Task {} status updated to {}", id, status);
     Ok(task)
+}
+
+/// Get task count
+pub async fn get_task_count(pool: &PgPool) -> Result<i64, AppError> {
+    let row = sqlx::query("SELECT COUNT(*) as count FROM tasks")
+        .fetch_one(pool)
+        .await?;
+
+    let count: i64 = row.get("count");
+    Ok(count)
 }
