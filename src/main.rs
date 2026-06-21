@@ -14,6 +14,11 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let bind_address = format!("0.0.0.0:{}", port);
+
+    log::info!("Connecting to database...");
+    log::info!("Server will bind to: {}", bind_address);
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -40,7 +45,7 @@ async fn main() -> std::io::Result<()> {
 
     let pool_data = web::Data::new(pool);
 
-    log::info!("🚀 Starting Task Backend Server...");
+    log::info!("🚀 Starting Task Backend Server on {}", bind_address);
 
     HttpServer::new(move || {
         App::new()
@@ -48,7 +53,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .configure(handlers::config)
     })
-    .bind("0.0.0.0:8080")?
+    .bind(&bind_address)?
     .run()
     .await
 }
