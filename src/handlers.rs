@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Scope};
+use actix_web::{web, HttpResponse};
 use serde::Deserialize;
 use sqlx::PgPool;
 

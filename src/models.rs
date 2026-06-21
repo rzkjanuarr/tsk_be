@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use sqlx::FromRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

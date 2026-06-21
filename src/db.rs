@@ -1,4 +1,4 @@
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::Utc;
 
