@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use chrono::Utc;
 use sqlx::FromRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
