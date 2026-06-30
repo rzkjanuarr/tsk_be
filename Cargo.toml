@@ -19,3 +19,5 @@ rand = "0.8"
 thiserror = "1.0"
 bcrypt = "0.15"
 jsonwebtoken = "9.3"
+# Fix: pin time to compatible version for cookie 0.16.2
+time = "=0.3.36"
