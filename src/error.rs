@@ -55,12 +55,26 @@ impl From<sqlx::Error> for AppError {
             sqlx::Error::RowNotFound => AppError::NotFound("Task not found".to_string()),
             sqlx::Error::Database(db_err) => {
                 if db_err.message().contains("unique constraint") {
-                    AppError::Conflict("Slug already exists".to_string())
+                    AppError::Conflict("Email or slug already exists".to_string())
                 } else {
                     AppError::InternalServerError("Database error occurred".to_string())
                 }
             }
             _ => AppError::InternalServerError("Database error occurred".to_string()),
         }
+    }
+}
+
+impl From<bcrypt::BcryptError> for AppError {
+    fn from(err: bcrypt::BcryptError) -> Self {
+        log::error!("Bcrypt error: {:?}", err);
+        AppError::InternalServerError("Password hashing error".to_string())
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for AppError {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        log::error!("JWT error: {:?}", err);
+        AppError::InternalServerError("Token generation error".to_string())
     }
 }
