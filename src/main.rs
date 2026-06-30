@@ -14,21 +14,35 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = match env::var("DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            log::error!("DATABASE_URL environment variable not set!");
+            std::process::exit(1);
+        }
+    };
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let bind_address = format!("0.0.0.0:{}", port);
 
     log::info!("Connecting to MySQL database...");
     log::info!("Server will bind to: {}", bind_address);
 
-    let pool = MySqlPoolOptions::new()
+    let pool = match MySqlPoolOptions::new()
         .max_connections(5)
+        .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(&database_url)
         .await
-        .expect("Failed to connect to database");
+    {
+        Ok(pool) => pool,
+        Err(e) => {
+            log::error!("Failed to connect to database: {}", e);
+            log::error!("Please check DATABASE_URL and make sure database is running!");
+            std::process::exit(1);
+        }
+    };
 
     // Create users table if not exists
-    sqlx::query(
+    if let Err(e) = sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(36) PRIMARY KEY,
@@ -42,10 +56,12 @@ async fn main() -> std::io::Result<()> {
     )
     .execute(&pool)
     .await
-    .expect("Failed to create users table");
+    {
+        log::error!("Failed to create users table: {}", e);
+    }
 
     // Create tasks table if not exists
-    sqlx::query(
+    if let Err(e) = sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS tasks (
             id VARCHAR(36) PRIMARY KEY,
@@ -62,7 +78,9 @@ async fn main() -> std::io::Result<()> {
     )
     .execute(&pool)
     .await
-    .expect("Failed to create tasks table");
+    {
+        log::error!("Failed to create tasks table: {}", e);
+    }
 
     log::info!("Users and Tasks tables ready");
 
