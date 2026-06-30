@@ -8,6 +8,7 @@ mod middleware;
 use actix_web::{web, App, HttpServer, middleware::Logger};
 use sqlx::mysql::MySqlPoolOptions;
 use std::env;
+use std::str::FromStr;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -27,17 +28,45 @@ async fn main() -> std::io::Result<()> {
     log::info!("Connecting to MySQL database...");
     log::info!("Server will bind to: {}", bind_address);
 
-    let pool = match MySqlPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(std::time::Duration::from_secs(30))
-        .connect(&database_url)
-        .await
-    {
-        Ok(pool) => pool,
-        Err(e) => {
-            log::error!("Failed to connect to database: {}", e);
-            log::error!("Please check DATABASE_URL and make sure database is running!");
-            std::process::exit(1);
+    let pool = {
+        let opts = match sqlx::mysql::MySqlConnectOptions::from_str(&database_url) {
+            Ok(o) => o,
+            Err(e) => {
+                log::error!("Invalid DATABASE_URL: {}", e);
+                std::process::exit(1);
+            }
+        };
+
+        // First try with Preferred SSL
+        match MySqlPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(std::time::Duration::from_secs(30))
+            .connect_with(opts.clone().ssl_mode(sqlx::mysql::MySqlSslMode::Preferred))
+            .await
+        {
+            Ok(pool) => pool,
+            Err(e) => {
+                log::error!("Failed to connect with preferred SSL: {}", e);
+                log::error!("Trying without SSL...");
+                
+                // Try without SSL
+                match MySqlPoolOptions::new()
+                    .max_connections(5)
+                    .acquire_timeout(std::time::Duration::from_secs(30))
+                    .connect_with(opts.ssl_mode(sqlx::mysql::MySqlSslMode::Disabled))
+                    .await
+                {
+                    Ok(pool) => pool,
+                    Err(e2) => {
+                        log::error!("Failed to connect without SSL too: {}", e2);
+                        log::error!("Please make sure:");
+                        log::error!("1. DATABASE_URL is correct");
+                        log::error!("2. Database is running and accessible");
+                        log::error!("3. Firewall allows connections");
+                        std::process::exit(1);
+                    }
+                }
+            }
         }
     };
 
