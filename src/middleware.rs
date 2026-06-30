@@ -62,7 +62,7 @@ where
                 None => return Err(error::ErrorUnauthorized("Missing authorization header")),
             };
 
-            let claims = match decode_token(token)
+            let claims = decode_token(token)
                 .map_err(|_| error::ErrorUnauthorized("Invalid or expired token"))?;
 
             req.extensions_mut().insert(claims.sub.clone());

@@ -78,3 +78,10 @@ impl From<jsonwebtoken::errors::Error> for AppError {
         AppError::InternalServerError("Token generation error".to_string())
     }
 }
+
+impl From<actix_web::Error> for AppError {
+    fn from(err: actix_web::Error) -> Self {
+        log::error!("Actix error: {:?}", err);
+        AppError::InternalServerError("Server error".to_string())
+    }
+}
